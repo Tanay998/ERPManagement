@@ -40,7 +40,7 @@ if ($rollNo) {
     $firstName = $nameParts[0] ?? '';
     $middleName = count($nameParts) > 1 ? $nameParts[1] : '';
     $lastName = count($nameParts) > 2 ? implode(' ', array_slice($nameParts, 2)) : '';
-    $fatherName = $transferDate['fatherName'];
+    $fatherName = $transferData['fatherName'];
 }
 ?>
 <!DOCTYPE html>
