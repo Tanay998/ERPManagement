@@ -1,0 +1,30 @@
+<?php
+session_start();
+require_once 'config.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$pdo = new PDO("mysql:host=localhost;dbname=schoolfeesys", DB_USER, DB_PASS);
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+$response = ['success' => false, 'message' => ''];
+
+if (isset($_GET['id'])) {
+    try {
+        // Delete the record
+        $stmt = $pdo->prepare("DELETE FROM enquiry WHERE id = ?");
+        $stmt->execute([$_GET['id']]);
+        $response['success'] = true;
+        $response['message'] = 'Record deleted successfully';
+    } catch (Exception $e) {
+        $response['message'] = $e->getMessage();
+    }
+}
+
+header('Content-Type: application/json');
+echo json_encode($response);
+exit();
+?>

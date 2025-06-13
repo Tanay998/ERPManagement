@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insert District</title>
+    <style>
+        /* Optional: Add some styling for better UX */
+        textarea {
+            width: 300px;
+            height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Insert District</h1>
+    <form action="insert_district.php" method="post">
+        <label for="state_id">State ID:</label>
+        <input type="text" id="state_id" name="state_id" required><br><br>
+
+        <label for="name">District Names (comma-separated):</label>
+        <textarea id="name" name="name" required></textarea><br><br>
+
+        <input type="submit" value="Insert District">
+    </form>
+</body>
+</html>
