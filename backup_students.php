@@ -1,8 +1,9 @@
 <?php
-ob_start();
+// backup_students.php
 require_once 'config.php';
-$page = 'studentList.php';
-// Handle delete action
+$page = 'backup_students.php';
+
+// Handle delete action (if needed)
 if (isset($_GET['delete'])) {
     if (!isset($_SESSION['user_role'])) {
         header("Location: login.php");
@@ -12,12 +13,12 @@ if (isset($_GET['delete'])) {
     $id = $_GET['delete'];
     $table = $_GET['table'] ?? '';
     
-    if ($table === 'polyregis') {
-        $sql = "DELETE FROM polyregis WHERE RollNo = ?";
-    } elseif ($table === 'estcregis') {
-        $sql = "DELETE FROM estcregis WHERE id = ?";
+    if ($table === 'polyregis_backup') {
+        $sql = "DELETE FROM polyregis_backup WHERE RollNo = ?";
+    } elseif ($table === 'estcregis_backup') {
+        $sql = "DELETE FROM estcregis_backup WHERE id = ?";
     } else {
-        header("Location: index.php?page=studentList.php&error=Invalid table");
+        header("Location: index.php?page=$page&error=Invalid table");
         exit();
     }
     
@@ -34,62 +35,8 @@ if (isset($_GET['delete'])) {
     } catch (Exception $e) {
         $message = "Error deleting record: " . $e->getMessage();
     }
-    ob_end_clean();
-    header("Location: index.php?page=studentList.php&message=" . urlencode($message));
-    exit();
-}
-
-// Handle transfer action
-// Handle transfer action
-if (isset($_GET['transfer'])) {
-    if (!isset($_SESSION['user_role'])) {
-        ob_end_clean();
-        header("Location: login.php");
-        exit();
-    }
     
-    $id = $_GET['transfer'];
-    $table = $_GET['table'] ?? '';
-    $message = '';
-    
-    try {
-        $conn->begin_transaction();
-        
-        if ($table === 'polyregis') {
-            // Copy to backup
-            $copySql = "INSERT INTO polyregis_backup SELECT * FROM polyregis WHERE RollNo = ?";
-            $stmtCopy = $conn->prepare($copySql);
-            $stmtCopy->bind_param("s", $id);
-            $stmtCopy->execute();
-            
-            // Delete original
-            $deleteSql = "DELETE FROM polyregis WHERE RollNo = ?";
-        } elseif ($table === 'estcregis') {
-            // Copy to backup
-            $copySql = "INSERT INTO estcregis_backup SELECT * FROM estcregis WHERE id = ?";
-            $stmtCopy = $conn->prepare($copySql);
-            $stmtCopy->bind_param("s", $id);
-            $stmtCopy->execute();
-            
-            // Delete original
-            $deleteSql = "DELETE FROM estcregis WHERE id = ?";
-        } else {
-            throw new Exception("Invalid table for transfer");
-        }
-        
-        $stmtDelete = $conn->prepare($deleteSql);
-        $stmtDelete->bind_param("s", $id);
-        $stmtDelete->execute();
-        
-        $conn->commit();
-        $message = "Student transferred to backup successfully";
-    } catch (Exception $e) {
-        $conn->rollback();
-        $message = "Transfer failed: " . $e->getMessage();
-    }
-    
-    ob_end_clean();
-    header("Location: index.php?page=studentList.php&message=" . urlencode($message));
+    header("Location: index.php?page=$page&message=" . urlencode($message));
     exit();
 }
 
@@ -107,26 +54,25 @@ $filters = [
 // Get distinct values for filters
 $distinctValues = [];
 try {
-    // Admission Types
-    $sql = "SELECT DISTINCT TRIM(admissionType) AS admissionType FROM polyregis";
+    // Admission Types (from backup table)
+    $sql = "SELECT DISTINCT TRIM(admissionType) AS admissionType FROM polyregis_backup";
     $result = $db->query($sql);
     $distinctValues['admission_types'] = $result->fetch_all(MYSQLI_ASSOC);
     
-    // Semesters
-    $sql = "SELECT DISTINCT TRIM(semester) AS semester FROM polyregis ORDER BY semester";
+    // Semesters (from backup table)
+    $sql = "SELECT DISTINCT TRIM(semester) AS semester FROM polyregis_backup ORDER BY semester";
     $result = $db->query($sql);
     $distinctValues['semesters'] = $result->fetch_all(MYSQLI_ASSOC);
     
-    // Branches
-    $sql = "SELECT DISTINCT TRIM(branch) AS branch FROM polyregis ORDER BY branch";
+    // Branches (from backup table)
+    $sql = "SELECT DISTINCT TRIM(branch) AS branch FROM polyregis_backup ORDER BY branch";
     $result = $db->query($sql);
     $distinctValues['branches'] = $result->fetch_all(MYSQLI_ASSOC);
 } catch (Exception $e) {
     $error = "Error fetching distinct values: " . $e->getMessage();
 }
 
-
-// Get selected table data with filters
+// Get backup table data with filters
 $tableData = [];
 $summary = [
     'by_admission' => [],
@@ -136,14 +82,10 @@ $summary = [
     'record_count' => 0
 ];
 
-// Get selected table data
-$selectedTable = $_POST['student_type'] ?? 'polytechnic';
-$tableData = [];
-
 try {
     if ($selectedTable === 'polytechnic') {
-        $sql = "SELECT branch, applicantName, fatherName, state, cdistrict, dob, admissionType, course, RollNo, semester, RegistrationDate,RegistrationFee, TransactionID FROM polyregis WHERE 1=1";
-        // Apply filters
+        $sql = "SELECT branch, applicantName, fatherName, state, cdistrict, dob, admissionType, course, RollNo, semester, RegistrationDate, RegistrationFee, TransactionID FROM polyregis_backup WHERE 1=1";
+        // Apply filters same as studentList.php
         $params = [];
         $types = '';
 
@@ -159,7 +101,7 @@ try {
             $types .= 's';
         }
 
-         if (!empty($filters['branch'])) {
+        if (!empty($filters['branch'])) {
             $sql .= " AND branch = ?";
             $params[] = $filters['branch'];
             $types .= 's';
@@ -183,33 +125,30 @@ try {
             $types .= 's';
         }
         
-        // Execute main query
+        // Execute query
         $stmt = $db->prepare($sql);
         if ($types) {
             $stmt->bind_param($types, ...$params);
         }
 
         $stmt->execute();
-
-         $result = $stmt->get_result();
+        $result = $stmt->get_result();
         
-       if ($result->num_rows > 0) {
+        if ($result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 $tableData[] = $row;
                 // Update summary data
-                 $fee = (float)($row['RegistrationFee'] ?? 0);
+                $fee = (float)($row['RegistrationFee'] ?? 0);
                 $summary['total_fee'] += $fee;
                 $summary['record_count']++;
                 
                 $admissionType = trim($row['admissionType'] ?? 'Unknown');
                 $admissionType = $admissionType === '' ? 'Unknown' : $admissionType;
 
-
                 $semester = trim($row['semester'] ?? '');
                 $semester = $semester === '' ? 'Unknown' : $semester;
                 $semester = preg_replace('/^Sem\s*/i', '', $semester);
 
-                // Normalize branch names: trim and remove duplicate spaces
                 $branch = preg_replace('/\s+/', ' ', trim($row['branch'] ?? ''));
                 $branch = $branch === '' ? 'Unknown' : $branch;
                 
@@ -229,15 +168,8 @@ try {
                 $summary['by_branch'][$branch] += $fee;
             }
         }
-
-         // Add summary for "Not Paid" if filtered
-        if ($filters['payment_status'] === 'not_paid') {
-            $summary['by_admission']['Not Paid'] = $summary['total_fee'];
-            $summary['by_semester']['Not Paid'] = $summary['total_fee'];
-            $summary['by_branch']['Not Paid'] = $summary['total_fee'];
-        }
     } elseif ($selectedTable === 'non-polytechnic') {
-        $sql = "SELECT id, course_type, courseLevel, course_list, applicant_name, employment_status, photo_path, registration_fee, transaction_id FROM estcregis";
+        $sql = "SELECT id, course_type, courseLevel, course_list, applicant_name, employment_status, photo_path, registration_fee, transaction_id FROM estcregis_backup";
         $result = $db->query($sql);
         
         if ($result->num_rows > 0) {
@@ -249,7 +181,6 @@ try {
 } catch (Exception $e) {
     $error = "Error fetching data: " . $e->getMessage();
 }
-ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -257,12 +188,13 @@ ob_end_flush();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student List | ERP Management</title>
+    <title>Transferred Students | ERP Management</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Same styles as studentList.php */
         .table-container {
             overflow-x: auto;
             max-width: 100%;
@@ -302,21 +234,11 @@ ob_end_flush();
 </head>
 <body>
     <div class="container-fluid py-4 mt-4">
-        <!-- Add this near the top of studentList.php -->
-        <div class="d-flex justify-content-between mb-3">
-            <h2 class="h4 mb-0">Student Registration</h2>
-            <div>
-                <a href="index.php?page=backup_students.php" class="btn btn-info me-2">
-                    <i class="fas fa-archive"></i> View Transferred Students
-                </a>
-                <a href="index.php" class="btn btn-warning">BACK</a>
-            </div>
-        </div>
         <div class="card shadow" style="width:100%;">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h2 class="h4 mb-0">Student Registration</h2>
-                    <a href="index.php?page=studentList.php" class="btn btn-warning float-end">BACK</a>
+                    <h2 class="h4 mb-0">Transferred Students</h2>
+                    <a href="index.php?page=studentList.php" class="btn btn-warning float-end">BACK TO ACTIVE</a>
                 </div>
             </div>
             
@@ -349,57 +271,56 @@ ob_end_flush();
                     </div>
                 </form>
 
-
-                 <!-- NEW FILTER SECTION -->
+                <!-- FILTER SECTION -->
                 <div class="filter-section">
-                    <h5>Filter Students</h5>
+                    <h5>Filter Transferred Students</h5>
                     <form method="post">
                         <input type="hidden" name="student_type" value="<?= $selectedTable ?>">
                         
                         <div class="row g-3">
                             <?php if ($selectedTable === 'polytechnic'): ?>
                                 <div class="card summary-card mb-4">
-    <div class="card-body">
-        <h5 class="card-title">Fee Summary (Filtered Results)</h5>
-        <div class="row">
-            <div class="col-md-4">
-                <h6>By Admission Type:</h6>
-                <?php foreach ($summary['by_admission'] as $type => $amount): ?>
-                    <div class="summary-item">
-                        <span class="fw-bold"><?= $type ?>:</span> 
-                        ₹<?= number_format($amount, 2) ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <div class="col-md-4">
-                <h6>By Semester:</h6>
-                <?php foreach ($summary['by_semester'] as $sem => $amount): ?>
-                    <div class="summary-item">
-                        <span class="fw-bold">Sem <?= $sem ?>:</span> 
-                        ₹<?= number_format($amount, 2) ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <div class="col-md-4">
-                <h6>By Branch:</h6>
-                <?php foreach ($summary['by_branch'] as $branch => $amount): ?>
-                    <div class="summary-item">
-                        <span class="fw-bold"><?= $branch ?>:</span> 
-                        ₹<?= number_format($amount, 2) ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <div class="mt-3 pt-2 border-top">
-            <h5>Total Registration Fees: 
-                <span class="text-primary">₹<?= number_format($summary['total_fee'], 2) ?></span>
-                <span class="fs-6 text-muted">(<?= $summary['record_count'] ?> records)</span>
-            </h5>
-        </div>
-    </div>
-</div>
+                                    <div class="card-body">
+                                        <h5 class="card-title">Fee Summary (Filtered Results)</h5>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <h6>By Admission Type:</h6>
+                                                <?php foreach ($summary['by_admission'] as $type => $amount): ?>
+                                                    <div class="summary-item">
+                                                        <span class="fw-bold"><?= $type ?>:</span> 
+                                                        ₹<?= number_format($amount, 2) ?>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                            
+                                            <div class="col-md-4">
+                                                <h6>By Semester:</h6>
+                                                <?php foreach ($summary['by_semester'] as $sem => $amount): ?>
+                                                    <div class="summary-item">
+                                                        <span class="fw-bold">Sem <?= $sem ?>:</span> 
+                                                        ₹<?= number_format($amount, 2) ?>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                            
+                                            <div class="col-md-4">
+                                                <h6>By Branch:</h6>
+                                                <?php foreach ($summary['by_branch'] as $branch => $amount): ?>
+                                                    <div class="summary-item">
+                                                        <span class="fw-bold"><?= $branch ?>:</span> 
+                                                        ₹<?= number_format($amount, 2) ?>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 pt-2 border-top">
+                                            <h5>Total Registration Fees: 
+                                                <span class="text-primary">₹<?= number_format($summary['total_fee'], 2) ?></span>
+                                                <span class="fs-6 text-muted">(<?= $summary['record_count'] ?> records)</span>
+                                            </h5>
+                                        </div>
+                                    </div>
+                                </div>
                             <div class="col-md-3">
                                 <label class="form-label">Admission Type</label>
                                 <select name="admission_type" class="form-select">
@@ -463,22 +384,17 @@ ob_end_flush();
                             
                             <div class="col-md-2 d-flex align-items-end">
                                 <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
-                                <a href="index.php?page=studentList.php" class="btn btn-outline-secondary">Reset</a>
+                                <a href="index.php?page=<?= $page ?>" class="btn btn-outline-secondary">Reset</a>
                             </div>
                         </div>
                     </form>
                 </div>
-                <!-- END FILTER SECTION -->
                 
                 <div class="btn-group">
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importModal" name="excelFile" id="excelFile" accept=".xlsx, .xls" required>
-                        <i class="fas fa-file-import"></i> Import Excel
-                    </button>
-                    <a href="export_excel1.php?type=<?= $selectedTable ?>" class="btn btn-primary">
+                    <a href="export_excel_backup.php?type=<?= $selectedTable ?>" class="btn btn-primary">
                         <i class="fas fa-file-export"></i> Export Excel
                     </a>
                 </div>
-
 
                 <div class="table-container mt-4 p-2">
                     <div class="table-responsive">
@@ -518,26 +434,14 @@ ob_end_flush();
                                                 <td><?= htmlspecialchars($row['semester']) ?></td>
                                                 <td><?= htmlspecialchars($row['RegistrationFee']) ?></td>
                                                 <td class="action-buttons">
-                                                    <!-- For Polytechnic Students -->
-                                                    <a href="view_student.php?table=polyregis&id=<?= urlencode($row['RollNo']) ?>" class="btn btn-sm btn-info" title="View">
+                                                    <a href="view_student.php?table=polyregis_backup&id=<?= urlencode($row['RollNo']) ?>" class="btn btn-sm btn-info" title="View">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a href="edit_student.php?table=polyregis&id=<?= $row['RollNo'] ?>" class="btn btn-sm btn-warning" title="Edit">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <a href="studentList.php?delete=<?= $row['RollNo'] ?>&table=polyregis" 
+                                                    <a href="studentList.php?delete=<?= $row['RollNo'] ?>&table=polyregis_backup" 
                                                        class="btn btn-sm btn-danger" 
                                                        title="Delete"
-                                                       onclick="return confirm('Are you sure you want to delete this record?')">
+                                                       onclick="return confirm('Are you sure you want to permanently delete this record?')">
                                                         <i class="fas fa-trash-alt"></i>
-                                                    </a>
-
-                                                    <!-- For Polytechnic Students -->
-                                                    <a href="index.php?page=new_admission1.php&gid=<?= $row['RollNo'] ?>&table=polyregis" 
-                                                    class="btn btn-sm btn-secondary" 
-                                                    title="Transfer"
-                                                    onclick="return confirm('Transfer student to backup?')">
-                                                    <i class="fas fa-exchange-alt"></i> Transfer
                                                     </a>
                                                 </td>
                                             <?php else: ?>
@@ -554,25 +458,14 @@ ob_end_flush();
                                                 <td><?= htmlspecialchars($row['registration_fee']) ?></td>
                                                 <td><?= htmlspecialchars($row['transaction_id']) ?></td>
                                                 <td class="action-buttons">
-                                                <!-- For Non-Polytechnic Students -->
-                                                <a href="view_student.php?table=estcregis&id=<?= urlencode($row['id']) ?>" class="btn btn-sm btn-info" title="View">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                    <a href="edit_student.php?table=estcregis&id=<?= $row['id'] ?>" class="btn btn-sm btn-warning" title="Edit">
-                                                        <i class="fas fa-edit"></i>
+                                                    <a href="view_student.php?table=estcregis_backup&id=<?= urlencode($row['id']) ?>" class="btn btn-sm btn-info" title="View">
+                                                        <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a href="studentList.php?delete=<?= $row['id'] ?>&table=estcregis" 
+                                                    <a href="studentList.php?delete=<?= $row['id'] ?>&table=estcregis_backup" 
                                                        class="btn btn-sm btn-danger" 
                                                        title="Delete"
-                                                       onclick="return confirm('Are you sure you want to delete this record?')">
+                                                       onclick="return confirm('Are you sure you want to permanently delete this record?')">
                                                         <i class="fas fa-trash-alt"></i>
-                                                    </a>
-                                                    <!-- For Non-Polytechnic Students -->
-                                                    <a href="index.php?page=promte_class1.php&gid=<?= $row['id'] ?>&table=estcregis" 
-                                                    class="btn btn-sm btn-secondary" 
-                                                    title="Transfer"
-                                                    onclick="return confirm('Transfer student to backup?')">
-                                                    <i class="fas fa-exchange-alt"></i> Transfer
                                                     </a>
                                                 </td>
                                             <?php endif; ?>
@@ -580,8 +473,8 @@ ob_end_flush();
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="<?= $selectedTable === 'polytechnic' ? 13 : 9 ?>" class="text-center text-muted py-4">
-                                            No records found
+                                        <td colspan="<?= $selectedTable === 'polytechnic' ? 7 : 9 ?>" class="text-center text-muted py-4">
+                                            No transferred records found
                                         </td>
                                     </tr>
                                 <?php endif; ?>
@@ -594,7 +487,7 @@ ob_end_flush();
             <div class="card-footer text-muted">
                 <div class="d-flex justify-content-between">
                     <div>
-                        Total Records: <strong><?= count($tableData) ?></strong>
+                        Total Transferred Records: <strong><?= count($tableData) ?></strong>
                     </div>
                     <div>
                         <small>ERP Management System &copy; <?= date('Y') ?></small>
@@ -606,57 +499,13 @@ ob_end_flush();
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script>
-         // Initialize DataTable
-         $(document).ready(function() {
+        $(document).ready(function() {
             $('#tableSelect').DataTable();
         });
     </script>
-    <!-- Import Modal -->
-<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form action="import_excel1.php" method="post" enctype="multipart/form-data" class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="importModalLabel">Import Excel File</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-          <div class="mb-3">
-              <label for="excelFile" class="form-label">Choose Excel File (.xlsx)</label>
-              <input class="form-control" type="file" name="excelFile" id="excelFile" accept=".xlsx, .xls" required>
-              <input type="hidden" name="table" value="<?= $selectedTable ?>">
-          </div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" name="import" class="btn btn-success">Upload</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-      </div>
-    </form>
-  </div>
-</div>
-<?php if (isset($_SESSION['alert'])): ?>
-    <div class="container mt-3">
-        <div id="importAlert" class="alert alert-<?= $_SESSION['alert']['type'] ?> alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($_SESSION['alert']['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    </div>
-    <script>
-        setTimeout(() => {
-            const alertBox = document.getElementById('importAlert');
-            if (alertBox) {
-                alertBox.classList.remove('show');
-                alertBox.classList.add('fade');
-            }
-        }, 30000); // 30 seconds
-    </script>
-    <?php unset($_SESSION['alert']); ?>
-<?php endif; ?>
-
 </body>
 </html>

@@ -44,6 +44,7 @@ $allowed_pages = array_merge($allowed_pages, [
     'view_staff.php',
     'view_student11.php',
     'add_staff.php',
+    'backup_students.php',
     'edit_fee_form.php',
     'edit_student11.php',
     'staff_id_cards.php',

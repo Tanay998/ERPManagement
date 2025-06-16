@@ -37,10 +37,19 @@ if ($rollNo) {
     
     // Split applicant name into parts
     $nameParts = explode(' ', $transferData['applicantName'] ?? '');
-    print_r($nameParts);
+    $length = count($nameParts);
+    print_r($length);
+    if($length==2){
+         $lastName =  $nameParts[1] ?? '';
+         $middleName =  '';
+    }
+    if($length>2){
+        $lastName = $nameParts[2] ?? '';
+        $middleName = $nameParts[1] ?? '';
+    }
     $firstName = $nameParts[0] ?? '';
-    $middleName = $nameParts[1] ?? '';
-    $lastName =  $nameParts[2] ?? '';
+    
+   
     $fatherName = $transferData['fatherName'];
 }
 ?>
