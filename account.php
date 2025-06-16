@@ -26,7 +26,7 @@ if ($conn->connect_error) {
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container mt-5 overflow-scroll">
         <h2 class="mb-4">Student Fee Records</h2>
         <table id="studentTable" class="table table-striped table-bordered" style="width:100%">
             <thead>
@@ -39,6 +39,8 @@ if ($conn->connect_error) {
                     <th>Profile Picture</th>
                     <th>Total Amount</th>
                     <th>Details</th>
+                    <th>Transaction ID</th>
+                    <th>Confirm Transfer</th>
                 </tr>
             </thead>
             <tbody>
@@ -65,6 +67,14 @@ if ($conn->connect_error) {
                                 <td><img src='{$row['Profile Picture']}' alt='Profile' style='height: 50px;'></td>
                                 <td>₹" . number_format($row['total_fixed'] ?? 0, 2) . "</td>
                                 <td><button class='btn btn-sm btn-primary view-details' data-id='{$row['RegNo']}'>View</button></td>
+                                <td><input type='text' class='form-control transaction-id' placeholder='Enter ID'></td>
+                                <td><button class='btn btn-sm btn-success confirm-btn' 
+                                    data-id='<?= {$row['RegNo'] }?>'
+                                    data-admission='<?= {$row['AdmissionNo']} ?>'
+                                    data-name='<?= {$row['FullName']} ?>'
+                                    data-course='<?= {$row['Course']} ?>'
+                                    data-amount='<?= {$row['total_fixed'] }?? 0 ?>'>Confirm</button>
+                                </td>
                               </tr>";
                     }
                 }
@@ -106,6 +116,36 @@ if ($conn->connect_error) {
                 }
             });
         });
+         // Handle confirm button click
+    $('#studentTable').on('click', '.confirm-btn', function() {
+        const $row = $(this).closest('tr');
+        const regNo = $(this).data('id');
+        const transactionId = $row.find('.transaction-id').val().trim();
+        
+        if (!transactionId) {
+            alert('Please enter Transaction ID');
+            return;
+        }
+
+        // Prepare data
+        const postData = {
+            regNo: regNo,
+            admissionNo: $(this).data('admission'),
+            fullName: $(this).data('name'),
+            course: $(this).data('course'),
+            amount: $(this).data('amount'),
+            transactionId: transactionId
+        };
+
+        // Send to transfer.php
+        $.post('transfer.php', postData, function(response) {
+            if (response === 'success') {
+                window.location.href = 'examinations.php?regNo=' + regNo;
+            } else {
+                alert('Transfer failed: ' + response);
+            }
+        });
+    });
     </script>
 </body>
 </html>
