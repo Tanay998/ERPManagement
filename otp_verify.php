@@ -27,9 +27,9 @@ if(!isset($_SESSION['temp_user'])) {
         <div class="otp-container">
             <h2 class="text-center mb-4">OTP Verification</h2>
             <?php if(isset($_GET['otp'])): ?>
-                <div class="alert alert-info">
+                <!-- <div class="alert alert-info">
                     Demo OTP: <?= htmlspecialchars($_GET['otp']) ?>
-                </div>
+                </div> -->
             <?php endif; ?>
             <form action="otp_auth.php" method="post">
                 <div class="mb-3">

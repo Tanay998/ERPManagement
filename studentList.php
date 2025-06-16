@@ -87,7 +87,7 @@ $tableData = [];
 
 try {
     if ($selectedTable === 'polytechnic') {
-        $sql = "SELECT branch, applicantName, fatherName, state, cdistrict, dob, admissionType, course, RollNo, semester, RegistrationFee, TransactionID FROM polyregis WHERE 1=1";
+        $sql = "SELECT branch, applicantName, fatherName, state, cdistrict, dob, admissionType, course, RollNo, semester, RegistrationDate,RegistrationFee, TransactionID FROM polyregis WHERE 1=1";
         // Apply filters
         $params = [];
         $types = '';
@@ -117,13 +117,13 @@ try {
         }
         
         if (!empty($filters['from_date'])) {
-            $sql .= " AND registration_date >= ?";
+            $sql .= " AND RegistrationDate >= ?";
             $params[] = $filters['from_date'];
             $types .= 's';
         }
 
         if (!empty($filters['to_date'])) {
-            $sql .= " AND registration_date <= ?";
+            $sql .= " AND RegistrationDate <= ?";
             $params[] = $filters['to_date'];
             $types .= 's';
         }
@@ -246,7 +246,7 @@ try {
 </head>
 <body>
     <div class="container-fluid py-4 mt-4">
-        <div class="card shadow">
+        <div class="card shadow" style="width:100%;">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
                     <h2 class="h4 mb-0">Student Registration</h2>
