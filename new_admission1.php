@@ -38,7 +38,6 @@ if ($rollNo) {
     // Split applicant name into parts
     $nameParts = explode(' ', $transferData['applicantName'] ?? '');
     $length = count($nameParts);
-    print_r($length);
     if($length==2){
          $lastName =  $nameParts[1] ?? '';
          $middleName =  '';
@@ -335,6 +334,7 @@ if ($rollNo) {
                                     }
                                 ?>
                             </select>
+                            <input type="hidden" id="cstate1" name="cstate1">
                         </div>
                         <div class="col-md-6">
                             <label for="cdistrict">District</label>
@@ -373,7 +373,7 @@ if ($rollNo) {
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="pstate" class="form-label">राज्य (STATE)</label>
-                            <select class="form-select" id="pstate" name="pstate" onchange="transfer();fetchDistricts(this.value)">
+                            <select class="form-select" id="pstate" name="pstate" onchange="transfer();fetchDistricts(this.value);">
                                 <option selected>Select State</option>
                                 <?php
                                     $sql = "SELECT id, name FROM states ORDER BY name ASC";
@@ -385,16 +385,21 @@ if ($rollNo) {
                                     }
                                 ?>
                             </select>
+                            <input type="hidden" id="pstate1" name="pstate1">
                         </div>
-                        <div class="col-md-6">
-                            <label for="pdistrict">District</label>
-                            <select class="form-select" id="pdistrict" name="pdistrict">
-                                <option value="">Select District</option>
-                            </select>
+                        <!-- Permanent Address Section -->
+                            <div class="col-md-6">
+                                <label for="pdistrict">District</label>
+                                <select class="form-select" id="pdistrict" name="pdistrict">
+                                    <option value="">Select District</option>
+                                </select>
+                                 <input type="text" class="form-control" id="pdistrict1" name="pdistrict1" style="display: none;" readonly>
+                            </div>
                         </div>
+                        <!-- ADD THIS LINE -->
+                        <input type="hidden" id="ppdistrict" name="ppdistrict">
                     </div>
 
-                    <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="ppincode">Pincode</label>
                             <input type="text" name="ppincode" class="form-control" id="ppincode" placeholder="Enter Pincode" />
@@ -404,131 +409,147 @@ if ($rollNo) {
 
                 <!-- Fee Details Section -->
                 <div class="form-section">
-                    <div class="section-title">Fee Details</div>
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Student Information</h5>
-                                    <p class="card-text">
-                                        <strong>Semester:</strong> <span id="sem1"></span><br>
-                                        <strong>Year:</strong> <span id="year"></span><br>
-                                        <strong>Category:</strong> <span id="displayCategory"></span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+        <div class="section-title">Fee Details</div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Student Information</h5>
+                        <p class="card-text">
+                            <strong>Semester:</strong> <span id="sem1"></span><br>
+                            <strong>Year:</strong> <span id="year"></span><br>
+                            <strong>Category:</strong> <span id="displayCategory"></span>
+                        </p>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">Fee Structure</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered fee-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Fee Component</th>
-                                                    <th>Fixed Amount (₹)</th>
-                                                    <th>Amount Paid (₹)</th>
-                                                    <th>Balance (₹)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>Tuition Fee</td>
-                                                    <td>
-                                                        <span id="tuitionFixed">25,000</span>
-                                                        <input type="hidden" name="tuitionFixed" id="tuitionFixedValue" value="25000">
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" class="form-control tuition-fee" 
-                                                            name="tuition_fee" id="tuition_fee_input" 
-                                                            oninput="calculateTotals()">
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control tuition-balance" 
-                                                            name="tuition_balance" id="tuition_balance" 
-                                                            style="background-color: #f0f0f0;">
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Student Fund Fee</td>
-                                                    <td>
-                                                        <span id="studentFundFixed">7,000</span>
-                                                        <input type="hidden" name="studentFundFixed" id="studentFundFixedValue" value="7000">
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" class="form-control student-fund" 
-                                                            name="student_fund" oninput="calculateTotals()">
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control student-fund-balance" 
-                                                            name="student_fund_balance" id="student_fund_balance" 
-                                                            style="background-color: #f0f0f0;">
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Personality Development</td>
-                                                    <td>
-                                                        <span id="personalityFixed">2,000</span>
-                                                        <input type="hidden" name="personalityFixed" id="personalityFixedValue" value="2000">
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" class="form-control personality-dev" 
-                                                            name="personality_dev" oninput="calculateTotals()">
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control personality-dev-balance" 
-                                                            name="personality_dev_balance" id="personality_dev_balance" 
-                                                        style="background-color: #f0f0f0;">
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Security Deposit (Refundable)</td>
-                                                    <td>
-                                                        <span id="securityFixed">2,000</span>
-                                                        <input type="hidden" name="securityFixed" id="securityFixedValue" value="2000">
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" class="form-control security-deposit" 
-                                                            name="security_deposit" oninput="calculateTotals()">
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control security-deposit-balance" 
-                                                            name="security_deposit_balance" id="security_deposit_balance" 
-                                                        style="background-color: #f0f0f0;">
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Other's Fee</td>
-                                                    <td>
-                                                        <span id="formProcessingFixed">0</span>
-                                                        <input type="hidden" name="formProcessingFixed" id="formProcessingFixedValue" value="0">
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" class="form-control form-processing" 
-                                                            name="form_processing" id="form_processing_input" 
-                                                            style="background-color: #f0f0f0;" oninput="calculateTotals()">
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control form-processing-balance" 
-                                                            name="form_processing_balance" id="form_processing_balance" 
-                                                        style="background-color: #f0f0f0;">
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Fee Structure</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered fee-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fee Component</th>
+                                        <th>Fixed Amount (₹)</th>
+                                        <th>Amount Paid (₹)</th>
+                                        <th>Balance (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Tuition Fee</td>
+                                        <td>
+                                            <span id="tuitionFixed">25,000</span>
+                                            <input type="hidden" name="tuitionFixed" id="tuitionFixedValue" value="25000">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control tuition-fee" 
+                                                name="tuition_fee" id="tuition_fee_input" 
+                                                oninput="calculateTotals()">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control tuition-balance" 
+                                                name="tuition_balance" id="tuition_balance" 
+                                                style="background-color: #f0f0f0;" readonly>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Student Fund Fee</td>
+                                        <td>
+                                            <span id="studentFundFixed">7,000</span>
+                                            <input type="hidden" name="studentFundFixed" id="studentFundFixedValue" value="7000">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control student-fund" 
+                                                name="student_fund" oninput="calculateTotals()">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control student-fund-balance" 
+                                                name="student_fund_balance" id="student_fund_balance" 
+                                                style="background-color: #f0f0f0;" readonly>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Personality Development</td>
+                                        <td>
+                                            <span id="personalityFixed">2,000</span>
+                                            <input type="hidden" name="personalityFixed" id="personalityFixedValue" value="2000">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control personality-dev" 
+                                                name="personality_dev" oninput="calculateTotals()">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control personality-dev-balance" 
+                                                name="personality_dev_balance" id="personality_dev_balance" 
+                                            style="background-color: #f0f0f0;" readonly>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Security Deposit (Refundable)</td>
+                                        <td>
+                                            <span id="securityFixed">2,000</span>
+                                            <input type="hidden" name="securityFixed" id="securityFixedValue" value="2000">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control security-deposit" 
+                                                name="security_deposit" oninput="calculateTotals()">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control security-deposit-balance" 
+                                                name="security_deposit_balance" id="security_deposit_balance" 
+                                            style="background-color: #f0f0f0;" readonly>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Other's Fee</td>
+                                        <td>
+                                            <span id="formProcessingFixed">0</span>
+                                            <input type="hidden" name="formProcessingFixed" id="formProcessingFixedValue" value="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-processing" 
+                                                name="form_processing" id="form_processing_input" 
+                                                style="background-color: #f0f0f0;" oninput="calculateTotals()">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-processing-balance" 
+                                                name="form_processing_balance" id="form_processing_balance" 
+                                            style="background-color: #f0f0f0;" readonly>
+                                        </td>
+                                    </tr>
+                                    <!-- Add total rows -->
+                                    <tr class="total-row">
+                                        <td>Total Paid</td>
+                                        <td colspan="2">
+                                            <input type="text" class="form-control" 
+                                                name="total_paid" id="total-paid" 
+                                                style="background-color: #d1ecf1; font-weight: bold;" 
+                                                readonly>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control" 
+                                                name="balance" id="balance" 
+                                                style="background-color: #d1ecf1; font-weight: bold;" 
+                                                readonly>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
 
                 <div class="row mt-4">
                     <div class="col-md-12 text-center">
@@ -540,11 +561,16 @@ if ($rollNo) {
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
-    <script src="js/displaydata.js"></script>
+    <!-- <script src="js/displaydata.js"></script>
     <script type="text/javascript" src="js/gtransapi.js"></script>  
-    <script type="text/javascript" src="js/translator.js"></script>
+    <script type="text/javascript" src="js/translator.js"></script> -->
     
     <script>
+        function updateFeeStructure() {
+            // For now, we'll just recalculate totals
+            calculateTotals();
+            console.log("Fee structure updated");
+        }
 // Keep only the first calculateTotals() function
 function calculateTotals() {
     // Get fixed amounts
@@ -593,49 +619,49 @@ document.addEventListener('DOMContentLoaded', function() {
     
     <script>
         function sameth() {
-            if ($('#sameAs').is(':checked')) {
-                // Show/hide district fields
-                document.getElementById('pdistrict').style.display = 'none';
-                document.getElementById('pdistrict1').style.display = 'block';
-            
-                // Copy correspondence address to permanent address
-                $('#pcity').val($('#ccity').val());
-                $('#pstreet').val($('#cstreet').val());
-                $('#pstate').val($('#cstate').val());
-                $('#ppincode').val($('#cpincode').val());
-                
-                // Handle state names (for both correspondence and permanent)
-                var cstateValue = $('#cstate').val();
-                if (cstateValue) {
-                    var parts = cstateValue.split('|');
-                    $('#cstate1').val(parts[1]); // Store correspondence state name
-                    $('#pstate1').val(parts[1]); // Also store in permanent state name
-                }
-                
-                // Handle district values - copy both the ID and name
-                var districtId = $('#cdistrict').val();
-                var districtName = $('#cdistrict option:selected').text();
-                
-                $('#pdistrict').val(districtId); // Set the ID in the hidden dropdown
-                $('#pdistrict1').val(districtName); // Set the name in the visible field
-                $('#ppdistrict').val(districtName); // Set the name in the hidden field
-                
-            } else {
-                // Clear permanent address
-                $('#pcity').val('');
-                $('#pstreet').val('');
-                $('#pstate').val('');
-                $('#pdistrict').val('');
-                $('#pdistrict1').val('');
-                $('#ppdistrict').val('');
-                $('#ppincode').val('');
-                $('#pstate1').val('');
-                
-                // Restore district field visibility
-                document.getElementById('pdistrict').style.display = 'block';
-                document.getElementById('pdistrict1').style.display = 'none';
-            }
+    if ($('#sameAs').is(':checked')) {
+        // Hide permanent district dropdown and show text field
+        document.getElementById('pdistrict').style.display = 'none';
+        document.getElementById('pdistrict1').style.display = 'block';
+        
+        // Copy correspondence address to permanent address
+        $('#pcity').val($('#ccity').val());
+        $('#pstreet').val($('#cstreet').val());
+        $('#pstate').val($('#cstate').val());
+        $('#ppincode').val($('#cpincode').val());
+        
+        // Handle state names
+        var cstateValue = $('#cstate').val();
+        if (cstateValue) {
+            var parts = cstateValue.split('|');
+            $('#cstate1').val(parts[1]); // Store correspondence state name
+            $('#pstate1').val(parts[1]); // Store permanent state name
         }
+        
+        // Handle district values
+        var districtId = $('#cdistrict').val();
+        var districtName = $('#cdistrict option:selected').text();
+        
+        // Set values safely
+        $('#pdistrict').val(districtId);
+        $('#pdistrict1').val(districtName);
+        $('#ppdistrict').val(districtName);
+    } else {
+        // Clear permanent address
+        $('#pcity').val('');
+        $('#pstreet').val('');
+        $('#pstate').val('');
+        $('#pdistrict').val('');
+        $('#pdistrict1').val('');
+        $('#ppdistrict').val('');
+        $('#ppincode').val('');
+        $('#pstate1').val('');
+        
+        // Restore district field visibility
+        document.getElementById('pdistrict').style.display = 'block';
+        document.getElementById('pdistrict1').style.display = 'none';
+    }
+}
     </script>
 
     <script>
@@ -850,35 +876,58 @@ document.addEventListener('DOMContentLoaded', function() {
     </script>
     
     <script>
-        function transfer(){
-            document.getElementById('course1').value = document.getElementById('course').value;
-            document.getElementById('semester1').value = document.getElementById('semester').value;
-            document.getElementById('gender1').value = document.getElementById('gender').value;
-            document.getElementById('displayCategory').innerHTML = document.getElementById('category').value;
-            var stateValue = $('#cstate').val();
-            if (stateValue) {
-                var parts = stateValue.split('|');
-                $('#cstate1').val(parts[1]); // Store the name part
-            }
-            var stateValue = $('#pstate').val();
-            if (stateValue) {
-                var parts = stateValue.split('|');
-                $('#pstate1').val(parts[1]); // Store the name part
-            }
-            document.getElementById('pdistrict1').value = document.getElementById('ppdistrict').value;
-            document.getElementById('sem1').innerHTML = document.getElementById('semester').value;
-            if(document.getElementById('sem1').innerHTML == "Sem1" || document.getElementById('sem1').innerHTML == "Sem2"){
-                document.getElementById('year').innerHTML = "First_Year";
-            }
-            else if(document.getElementById('sem1').innerHTML == "Sem3" || document.getElementById('sem1').innerHTML == "Sem4"){
-                document.getElementById('year').innerHTML = "Second_Year";
-            }
-            else{
-                document.getElementById('year').innerHTML = "Third_Year";
-            }
-            document.getElementById('category1').value = document.getElementById('category').value;
-            updateFeeStructure(); 
+        function transfer() {
+    // Set hidden form values
+    document.getElementById('course1').value = document.getElementById('course').value;
+    document.getElementById('semester1').value = document.getElementById('semester').value;
+    document.getElementById('gender1').value = document.getElementById('gender').value;
+    
+    // Update displayed category
+    document.getElementById('displayCategory').innerHTML = document.getElementById('category').value;
+    
+    // Handle state values
+    var stateValue = $('#cstate').val();
+    if (stateValue) {
+        var parts = stateValue.split('|');
+        $('#cstate1').val(parts[1]); // Store the name part
+    }
+    
+    stateValue = $('#pstate').val();
+    if (stateValue) {
+        var parts = stateValue.split('|');
+        $('#pstate1').val(parts[1]); // Store the name part
+    }
+    
+    // Safely handle district values
+    const ppdistrictEl = document.getElementById('ppdistrict');
+    const pdistrict1El = document.getElementById('pdistrict1');
+    
+    if (ppdistrictEl && pdistrict1El) {
+        pdistrict1El.value = ppdistrictEl.value;
+    }
+    
+    // Update semester display
+    const semesterEl = document.getElementById('semester');
+    const sem1El = document.getElementById('sem1');
+    
+    if (semesterEl && sem1El) {
+        sem1El.innerHTML = semesterEl.value;
+        
+        if (sem1El.innerHTML === "Sem1" || sem1El.innerHTML === "Sem2") {
+            document.getElementById('year').innerHTML = "First_Year";
+        } else if (sem1El.innerHTML === "Sem3" || sem1El.innerHTML === "Sem4") {
+            document.getElementById('year').innerHTML = "Second_Year";
+        } else {
+            document.getElementById('year').innerHTML = "Third_Year";
         }
+    }
+    
+    // Set category value
+    document.getElementById('category1').value = document.getElementById('category').value;
+    
+    // Update fee structure
+    updateFeeStructure(); 
+}
         
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('course').addEventListener('change', updateBranchCode);

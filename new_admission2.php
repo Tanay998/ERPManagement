@@ -641,11 +641,16 @@ $transferData = [];
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
-    <script src="js/displaydata.js"></script>
+    <!-- <script src="js/displaydata.js"></script>
     <script type="text/javascript" src="js/gtransapi.js"></script>  
-    <script type="text/javascript" src="js/translator.js"></script>
+    <script type="text/javascript" src="js/translator.js"></script> -->
     
     <script>
+        function updateFeeStructure() {
+            // For now, we'll just recalculate totals
+            calculateTotals();
+            console.log("Fee structure updated");
+        }
 // Keep only the first calculateTotals() function
 function calculateTotals() {
     // Get fixed amounts
