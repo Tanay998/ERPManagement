@@ -1,4 +1,5 @@
 <?php 
+include 'config.php';
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
@@ -8,8 +9,44 @@ if (!isset($_SESSION['user_id'])) {
 if (!isset($_SESSION['transfer_data'])) {
     $_SESSION['error'] = "No transfer data found. Please start the transfer process again.";
 }
+// Add this after your existing session checks
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check for duplicate student based on name + father's name + DOB
+    $check_sql = "SELECT id FROM record WHERE 
+                 First Name = ? AND 
+                 Middle Name = ? AND
+                 Last Name= ? AND 
+                 Father Name = ?";
+    $stmt = $db->prepare($check_sql);
+    $stmt->bind_param("ssss", 
+        $_POST['firstname'],
+        $_POST['middlename'],
+        $_POST['lastname'],
+        $_POST['fathername']
+    );
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $_SESSION['error'] = "A student with these details already exists in our system.";
+        header("Location: new_admission1.php");
+        exit();
+    }
+    
+    // Check for duplicate phone numbers
+    $phone_sql = "SELECT id FROM record WHERE phone = ? OR phone1 = ?";
+    $stmt = $db->prepare($phone_sql);
+    $stmt->bind_param("ss", $_POST['phone'], $_POST['phone1']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $_SESSION['error'] = "This phone number is already registered in our system.";
+        header("Location: new_admission1.php");
+        exit();
+    }
+}
 
-include 'config.php';
 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Administrator';
 
 // Fetch the last ID
@@ -160,7 +197,7 @@ if ($rollNo) {
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label for="entry" class="form-label">प्रवेश का प्रकार (Type of admission)</label>
-                            <select name="entry" id="entry" class="form-select" onchange="showt();updateAdmissionType()">
+                            <select name="entry" id="entry" class="form-select" onchange="showt()">
                                 <option selected>Select Type of admission</option>
                                 <option value="Direct Entry">Direct Entry</option>
                                 <option value="Lateral Entry">Lateral Entry</option>
@@ -187,7 +224,7 @@ if ($rollNo) {
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label for="course" class="form-label">पाठ्यक्रम जिसमे प्रवेश लेना है (Select Course)</label>
-                            <select name="course" id="course" class="form-select" onchange="transfer();updateBranchCode()">
+                            <select name="course" id="course" class="form-select" onchange="transfer()">
                                 <option value="Course" selected>Select Course</option>
                                 <option value="Diploma in Mechanical Engineering">Diploma in Mechanical Engineering</option>
                                 <option value="Diploma in Electrical Engineering">Diploma in Electrical Engineering</option>
@@ -758,50 +795,62 @@ document.addEventListener('DOMContentLoaded', function() {
     </script>
 
     <script>
-       function showt(){
+       // Update the showt() function to handle visibility of additional fields
+        function showt() {
             const entryType = document.getElementById('entry').value;
             document.getElementById('entry1').value = entryType;
-        
-            // Get the course select element
+            
+            // Get references to the additional fields containers
+            const jeep1Div = document.getElementById('jeep1');
+            const rollNoDiv = document.getElementById('RollNo');
+            // Update the field visibility section with null checks
+            if (jeep1Div) {
+                jeep1Div.style.display = (entryType === "Jeep Entry" || entryType === "Lateral Entry" || entryType === "Direct Entry") 
+                    ? "block" : "none";
+            }
+
+            if (rollNoDiv) {
+                rollNoDiv.style.display = (entryType === "Jeep Entry" || entryType === "Lateral Entry" || entryType === "Direct Entry") 
+                    ? "block" : "none";
+            }
+    
+            // Show/hide fields based on admission type
+            if (entryType === "Jeep Entry") {
+                jeep1Div.style.display = "block";
+                rollNoDiv.style.display = "block";
+            } 
+            else if (entryType === "Lateral Entry") {
+                jeep1Div.style.display = "block";
+                rollNoDiv.style.display = "block";
+            } 
+            else if (entryType === "Direct Entry") {
+                jeep1Div.style.display = "block";
+                rollNoDiv.style.display = "block";
+            }
+    
+            // Existing functionality (keep this)
             const courseSelect = document.getElementById('course');
-        
+            
             if(entryType == "Jeep Entry") {
-                document.getElementById('tfw1').value = document.getElementById('tfw').value;
-                document.getElementById('jeep1').style.display = "block";
-                document.getElementById('RollNo1').style.display = "block";
-                document.getElementById('tfw1').style.display = "block";
-                
-                // Reset course options to original
                 resetCourseOptions();
             } 
             else if(entryType == "Lateral Entry") {
-                document.getElementById('tfw1').value = document.getElementById('tfw').value;
-                document.getElementById('jeep1').style.display = "block";
-                document.getElementById('RollNo1').style.display = "block";
-                document.getElementById('tfw1').style.display = "none";
-                
-                // Update course options with "Lateral Entry" suffix
                 updateCourseOptions('Lateral Entry');
             } 
             else if(entryType == "Direct Entry"){
-                document.getElementById('tfw1').value = document.getElementById('tfw').value;
-                document.getElementById('jeep1').style.display = "none";
-                document.getElementById('RollNo').style.display = "none";
-                document.getElementById('tfw1').style.display = "none";
-                
-                // Reset course options to original
                 resetCourseOptions();
             }
-            const admissionType = document.getElementById('entry').value;
+
+            // Update semester options based on admission type
             const semesterSelect = document.getElementById('semester');
             
             // Clear existing options except the first one
             while (semesterSelect.options.length > 1) {
                 semesterSelect.remove(1);
             }
-            
+    
             // Add options based on admission type
-            if (admissionType === 'Lateral Entry') {
+            if (entryType === 'Lateral Entry') {
                 // Add Sem3 to Sem6 for Lateral Entry
                 for (let i = 3; i <= 6; i++) {
                     const option = document.createElement('option');
@@ -818,9 +867,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     semesterSelect.add(option);
                 }
             }
-            
+    
             // Reset to default selection
             semesterSelect.selectedIndex = 0;
+            
+            // Also update admission type for branch code
+            updateAdmissionType();
+            updateBranchCode();
         }
 
         // Also call this function on page load to set initial state
@@ -877,85 +930,99 @@ document.addEventListener('DOMContentLoaded', function() {
     
     <script>
         function transfer() {
-    // Set hidden form values
-    document.getElementById('course1').value = document.getElementById('course').value;
-    document.getElementById('semester1').value = document.getElementById('semester').value;
-    document.getElementById('gender1').value = document.getElementById('gender').value;
+            // Set hidden form values
+            document.getElementById('course1').value = document.getElementById('course').value;
+            document.getElementById('semester1').value = document.getElementById('semester').value;
+            document.getElementById('gender1').value = document.getElementById('gender').value;
     
-    // Update displayed category
-    document.getElementById('displayCategory').innerHTML = document.getElementById('category').value;
+            // Update displayed category
+            document.getElementById('displayCategory').innerHTML = document.getElementById('category').value;
+            
+            // Handle state values
+            var stateValue = $('#cstate').val();
+            if (stateValue) {
+                var parts = stateValue.split('|');
+                $('#cstate1').val(parts[1]); // Store the name part
+            }
     
-    // Handle state values
-    var stateValue = $('#cstate').val();
-    if (stateValue) {
-        var parts = stateValue.split('|');
-        $('#cstate1').val(parts[1]); // Store the name part
-    }
+            stateValue = $('#pstate').val();
+            if (stateValue) {
+                var parts = stateValue.split('|');
+                $('#pstate1').val(parts[1]); // Store the name part
+            }
     
-    stateValue = $('#pstate').val();
-    if (stateValue) {
-        var parts = stateValue.split('|');
-        $('#pstate1').val(parts[1]); // Store the name part
-    }
+            // Safely handle district values
+            const ppdistrictEl = document.getElementById('ppdistrict');
+            const pdistrict1El = document.getElementById('pdistrict1');
+            
+            if (ppdistrictEl && pdistrict1El) {
+                pdistrict1El.value = ppdistrictEl.value;
+            }
     
-    // Safely handle district values
-    const ppdistrictEl = document.getElementById('ppdistrict');
-    const pdistrict1El = document.getElementById('pdistrict1');
+            // Update semester display
+            const semesterEl = document.getElementById('semester');
+            const sem1El = document.getElementById('sem1');
+            
+            if (semesterEl && sem1El) {
+                sem1El.innerHTML = semesterEl.value;
+                
+                if (sem1El.innerHTML === "Sem1" || sem1El.innerHTML === "Sem2") {
+                    document.getElementById('year').innerHTML = "First_Year";
+                } else if (sem1El.innerHTML === "Sem3" || sem1El.innerHTML === "Sem4") {
+                    document.getElementById('year').innerHTML = "Second_Year";
+                } else {
+                    document.getElementById('year').innerHTML = "Third_Year";
+                }
+            }
     
-    if (ppdistrictEl && pdistrict1El) {
-        pdistrict1El.value = ppdistrictEl.value;
-    }
-    
-    // Update semester display
-    const semesterEl = document.getElementById('semester');
-    const sem1El = document.getElementById('sem1');
-    
-    if (semesterEl && sem1El) {
-        sem1El.innerHTML = semesterEl.value;
-        
-        if (sem1El.innerHTML === "Sem1" || sem1El.innerHTML === "Sem2") {
-            document.getElementById('year').innerHTML = "First_Year";
-        } else if (sem1El.innerHTML === "Sem3" || sem1El.innerHTML === "Sem4") {
-            document.getElementById('year').innerHTML = "Second_Year";
-        } else {
-            document.getElementById('year').innerHTML = "Third_Year";
+                // Set category value
+                document.getElementById('category1').value = document.getElementById('category').value;
+                
+                // Update fee structure
+                updateFeeStructure(); 
+                updateBranchCode();
         }
-    }
-    
-    // Set category value
-    document.getElementById('category1').value = document.getElementById('category').value;
-    
-    // Update fee structure
-    updateFeeStructure(); 
-}
         
         document.addEventListener('DOMContentLoaded', function() {
+             updateBranchCode();
             document.getElementById('course').addEventListener('change', updateBranchCode);
             document.getElementById('entry').addEventListener('change', updateAdmissionType);
         });
 
+        // Function to update the branch code based on course and admission type
         function updateBranchCode() {
             const courseSelect = document.getElementById('course');
-            const branchInput = document.getElementById('brn');
             const admissionType = document.getElementById('entry').value;
-            const selectedCourse = courseSelect.value;
+            const branchInput = document.getElementById('brn');
             
-            // Determine base branch code
-            let branchCode = '';
-            if (selectedCourse.includes('Mechanical')) {
-                branchCode = 'M';
-            } else if (selectedCourse.includes('Electrical')) {
-                branchCode = 'E';
-            } else if (selectedCourse.includes('Computer')) {
-                branchCode = 'C';
+            // Get course code
+            let courseCode = '';
+            if (courseSelect.value.includes('Mechanical')) {
+                courseCode = 'ME';
+            } else if (courseSelect.value.includes('Electrical')) {
+                courseCode = 'EE';
+            } else if (courseSelect.value.includes('Computer')) {
+                courseCode = 'CSE';
             }
             
-            // Preserve -LE suffix if admission type is Lateral Entry
+            // Get admission type suffix
+            let admissionSuffix = '';
             if (admissionType === 'Lateral Entry') {
-                branchCode += '-LE';
+                admissionSuffix = 'LE';
+            } else if (admissionType === 'Jeep Entry') {
+                admissionSuffix = 'JE';
+            } else if (admissionType === 'Direct Entry') {
+                admissionSuffix = 'D';
             }
             
-            branchInput.value = branchCode;
+            // Combine them with hyphen only if both are present
+            if (courseCode && admissionSuffix) {
+                branchInput.value = `${courseCode}-${admissionSuffix}`;
+            } else if (courseCode) {
+                branchInput.value = courseCode;
+            } else {
+                branchInput.value = '';
+            }
         }
 
         function updateAdmissionType() {
@@ -979,5 +1046,56 @@ document.addEventListener('DOMContentLoaded', function() {
             branchInput.value = currentValue;
         }
     </script>
+    <!-- Add this script after your existing JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to calculate session year
+    function getSessionYear() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth(); // 0 = Jan, 11 = Dec
+        
+        // Academic session runs from April (month 3) to March (month 2)
+        if (currentMonth >= 3) { // April (3) to December (11)
+            return `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
+        } else { // January (0) to March (2)
+            return `${currentYear - 1}-${currentYear.toString().slice(-2)}`;
+        }
+    }
+
+    // Set the session year in the input field
+    document.getElementById('dateadd').value = getSessionYear();
+});
+</script>
+<script>
+    // Add this to your existing JavaScript
+$(document).ready(function() {
+    $('#form').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Check for duplicates via AJAX
+        $.ajax({
+            url: 'check_duplicate.php',
+            type: 'POST',
+            data: {
+                firstname: $('#firstname').val(),
+                lastname: $('#lastname').val(),
+                fathername: $('#fathername').val(),
+                dateone: $('#dateone').val(),
+                phone: $('#phone').val(),
+                phone1: $('#phone1').val()
+            },
+            success: function(response) {
+                if (response.exists) {
+                    alert(response.message);
+                } else {
+                    // No duplicates found, submit the form
+                    document.getElementById('form').submit();
+                }
+            }
+        });
+    });
+});
+</script>
 </body>
 </html>

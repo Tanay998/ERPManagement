@@ -129,6 +129,13 @@ if (isset($_GET['delete_id'])) {
                                                onclick="return confirm('Are you sure you want to delete this record?')">
                                                 <i class="fas fa-trash-alt"></i>
                                             </a>
+                                            <a href="#" class="btn btn-success btn-sm transfer-btn" 
+                                            title="Transfer" 
+                                            data-id="<?= $row['id'] ?>" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#transferModal">
+                                                <i class="fas fa-exchange-alt"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                     <?php
@@ -137,6 +144,38 @@ if (isset($_GET['delete_id'])) {
                             ?>
                         </tbody>
                     </table>
+                    <!-- Transfer Modal -->
+                    <div class="modal fade" id="transferModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Transfer Student Record</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <form action="transfer_record.php" method="post">
+                                    <div class="modal-body">
+                                        <input type="hidden" name="id" id="transfer_id">
+                                        <div class="mb-3">
+                                            <label class="form-label">Select New Semester</label>
+                                            <select class="form-select" name="new_semester" required>
+                                                <option value="">-- Select Semester --</option>
+                                                <option value="Sem 1">Semester 1</option>
+                                                <option value="Sem 2">Semester 2</option>
+                                                <option value="Sem 3">Semester 3</option>
+                                                <option value="Sem 4">Semester 4</option>
+                                                <option value="Sem 5">Semester 5</option>
+                                                <option value="Sem 6">Semester 6</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary">Transfer Record</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -150,6 +189,10 @@ if (isset($_GET['delete_id'])) {
     
     <script>
         $(document).ready(function() {
+            $('.transfer-btn').click(function() {
+            var id = $(this).data('id');
+            $('#transfer_id').val(id);
+        });
             $('#recordsTable').DataTable({
                 "responsive": true,
                 "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],

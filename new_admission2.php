@@ -155,7 +155,7 @@ $transferData = [];
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label for="entry" class="form-label">प्रवेश का प्रकार (Type of admission)</label>
-                            <select name="entry" id="entry" class="form-select" onchange="showt();updateAdmissionType()">
+                            <select name="entry" id="entry" class="form-select" onchange="showt()">
                                 <option selected>Select Type of admission</option>
                                 <option value="Direct Entry">Direct Entry</option>
                                 <option value="Lateral Entry">Lateral Entry</option>
@@ -194,7 +194,7 @@ $transferData = [];
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label for="course" class="form-label">पाठ्यक्रम जिसमे प्रवेश लेना है (Select Course)</label>
-                            <select name="course" id="course" class="form-select" onchange="transfer();updateBranchCode()">
+                            <select name="course" id="course" class="form-select" onchange="transfer()">
                                 <option value="Course" selected>Select Course</option>
                                 <option value="Diploma in Mechanical Engineering">Diploma in Mechanical Engineering</option>
                                 <option value="Diploma in Electrical Engineering">Diploma in Electrical Engineering</option>
@@ -838,50 +838,61 @@ document.addEventListener('DOMContentLoaded', function() {
     </script>
 
     <script>
-       function showt(){
+        function showt() {
             const entryType = document.getElementById('entry').value;
             document.getElementById('entry1').value = entryType;
-        
-            // Get the course select element
+            
+            // Get references to the additional fields containers
+            const jeep1Div = document.getElementById('jeep1');
+            const rollNoDiv = document.getElementById('RollNo');
+            // Update the field visibility section with null checks
+            if (jeep1Div) {
+                jeep1Div.style.display = (entryType === "Jeep Entry" || entryType === "Lateral Entry" || entryType === "Direct Entry") 
+                    ? "block" : "none";
+            }
+
+            if (rollNoDiv) {
+                rollNoDiv.style.display = (entryType === "Jeep Entry" || entryType === "Lateral Entry" || entryType === "Direct Entry") 
+                    ? "block" : "none";
+            }
+    
+            // Show/hide fields based on admission type
+            if (entryType === "Jeep Entry") {
+                jeep1Div.style.display = "block";
+                rollNoDiv.style.display = "block";
+            } 
+            else if (entryType === "Lateral Entry") {
+                jeep1Div.style.display = "block";
+                rollNoDiv.style.display = "block";
+            } 
+            else if (entryType === "Direct Entry") {
+                jeep1Div.style.display = "block";
+                rollNoDiv.style.display = "block";
+            }
+    
+            // Existing functionality (keep this)
             const courseSelect = document.getElementById('course');
-        
+            
             if(entryType == "Jeep Entry") {
-                document.getElementById('tfw1').value = document.getElementById('tfw').value;
-                document.getElementById('jeep1').style.display = "block";
-                document.getElementById('RollNo1').style.display = "block";
-                document.getElementById('tfw1').style.display = "block";
-                
-                // Reset course options to original
                 resetCourseOptions();
             } 
             else if(entryType == "Lateral Entry") {
-                document.getElementById('tfw1').value = document.getElementById('tfw').value;
-                document.getElementById('jeep1').style.display = "block";
-                document.getElementById('RollNo1').style.display = "block";
-                document.getElementById('tfw1').style.display = "none";
-                
-                // Update course options with "Lateral Entry" suffix
                 updateCourseOptions('Lateral Entry');
             } 
             else if(entryType == "Direct Entry"){
-                document.getElementById('tfw1').value = document.getElementById('tfw').value;
-                document.getElementById('jeep1').style.display = "none";
-                document.getElementById('RollNo').style.display = "none";
-                document.getElementById('tfw1').style.display = "none";
-                
-                // Reset course options to original
                 resetCourseOptions();
             }
-            const admissionType = document.getElementById('entry').value;
+
+            // Update semester options based on admission type
             const semesterSelect = document.getElementById('semester');
             
             // Clear existing options except the first one
             while (semesterSelect.options.length > 1) {
                 semesterSelect.remove(1);
             }
-            
+    
             // Add options based on admission type
-            if (admissionType === 'Lateral Entry') {
+            if (entryType === 'Lateral Entry') {
                 // Add Sem3 to Sem6 for Lateral Entry
                 for (let i = 3; i <= 6; i++) {
                     const option = document.createElement('option');
@@ -898,9 +909,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     semesterSelect.add(option);
                 }
             }
-            
+    
             // Reset to default selection
             semesterSelect.selectedIndex = 0;
+            
+            // Also update admission type for branch code
+            updateAdmissionType();
+            updateBranchCode();
         }
 
         // Also call this function on page load to set initial state
@@ -984,35 +999,49 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             document.getElementById('category1').value = document.getElementById('category').value;
             updateFeeStructure(); 
+            updateBranchCode();
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            updateBranchCode();
             document.getElementById('course').addEventListener('change', updateBranchCode);
             document.getElementById('entry').addEventListener('change', updateAdmissionType);
         });
 
+        // Function to update the branch code based on course and admission type
         function updateBranchCode() {
             const courseSelect = document.getElementById('course');
-            const branchInput = document.getElementById('brn');
             const admissionType = document.getElementById('entry').value;
-            const selectedCourse = courseSelect.value;
+            const branchInput = document.getElementById('brn');
             
-            // Determine base branch code
-            let branchCode = '';
-            if (selectedCourse.includes('Mechanical')) {
-                branchCode = 'M';
-            } else if (selectedCourse.includes('Electrical')) {
-                branchCode = 'E';
-            } else if (selectedCourse.includes('Computer')) {
-                branchCode = 'C';
+            // Get course code
+            let courseCode = '';
+            if (courseSelect.value.includes('Mechanical')) {
+                courseCode = 'ME';
+            } else if (courseSelect.value.includes('Electrical')) {
+                courseCode = 'EE';
+            } else if (courseSelect.value.includes('Computer')) {
+                courseCode = 'CSE';
             }
             
-            // Preserve -LE suffix if admission type is Lateral Entry
+            // Get admission type suffix
+            let admissionSuffix = '';
             if (admissionType === 'Lateral Entry') {
-                branchCode += '-LE';
+                admissionSuffix = 'LE';
+            } else if (admissionType === 'Jeep Entry') {
+                admissionSuffix = 'JE';
+            } else if (admissionType === 'Direct Entry') {
+                admissionSuffix = 'D';
             }
             
-            branchInput.value = branchCode;
+            // Combine them with hyphen only if both are present
+            if (courseCode && admissionSuffix) {
+                branchInput.value = `${courseCode}-${admissionSuffix}`;
+            } else if (courseCode) {
+                branchInput.value = courseCode;
+            } else {
+                branchInput.value = '';
+            }
         }
 
         function updateAdmissionType() {

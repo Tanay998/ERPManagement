@@ -41,6 +41,7 @@ if (isset($_GET['delete'])) {
 
 // Handle transfer action
 // Handle transfer action
+// Handle transfer action
 if (isset($_GET['transfer'])) {
     if (!isset($_SESSION['user_role'])) {
         ob_end_clean();
@@ -53,38 +54,94 @@ if (isset($_GET['transfer'])) {
     $message = '';
     
     try {
-        $conn->begin_transaction();
+        $db->begin_transaction();
         
         if ($table === 'polyregis') {
+            // Check if record exists
+            $checkSql = "SELECT * FROM polyregis WHERE RollNo = ?";
+            $stmtCheck = $db->prepare($checkSql);
+            $stmtCheck->bind_param("s", $id);
+            $stmtCheck->execute();
+            $result = $stmtCheck->get_result();
+            
+            if ($result->num_rows === 0) {
+                throw new Exception("Record not found in polyregis table");
+            }
+            
+            $record = $result->fetch_assoc();
+            
             // Copy to backup
-            $copySql = "INSERT INTO polyregis_backup SELECT * FROM polyregis WHERE RollNo = ?";
-            $stmtCopy = $conn->prepare($copySql);
-            $stmtCopy->bind_param("s", $id);
+            $copySql = "INSERT INTO polyregis_backup (RollNo, applicantName, fatherName, state, cdistrict, dob, admissionType, course, semester, RegistrationDate, RegistrationFee, TransactionID, branch) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmtCopy = $db->prepare($copySql);
+            $stmtCopy->bind_param("ssssssssssdss", 
+                $record['RollNo'],
+                $record['applicantName'],
+                $record['fatherName'],
+                $record['state'],
+                $record['cdistrict'],
+                $record['dob'],
+                $record['admissionType'],
+                $record['course'],
+                $record['semester'],
+                $record['RegistrationDate'],
+                $record['RegistrationFee'],
+                $record['TransactionID'],
+                $record['branch']
+            );
             $stmtCopy->execute();
             
             // Delete original
             $deleteSql = "DELETE FROM polyregis WHERE RollNo = ?";
+            $stmtDelete = $db->prepare($deleteSql);
+            $stmtDelete->bind_param("s", $id);
+            $stmtDelete->execute();
+            
         } elseif ($table === 'estcregis') {
+            // Check if record exists
+            $checkSql = "SELECT * FROM estcregis WHERE id = ?";
+            $stmtCheck = $db->prepare($checkSql);
+            $stmtCheck->bind_param("s", $id);
+            $stmtCheck->execute();
+            $result = $stmtCheck->get_result();
+            
+            if ($result->num_rows === 0) {
+                throw new Exception("Record not found in estcregis table");
+            }
+            
+            $record = $result->fetch_assoc();
+            
             // Copy to backup
-            $copySql = "INSERT INTO estcregis_backup SELECT * FROM estcregis WHERE id = ?";
-            $stmtCopy = $conn->prepare($copySql);
-            $stmtCopy->bind_param("s", $id);
+            $copySql = "INSERT INTO estcregis_backup (id, course_type, courseLevel, course_list, applicant_name, employment_status, photo_path, registration_fee, transaction_id) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmtCopy = $db->prepare($copySql);
+            $stmtCopy->bind_param("sssssssds", 
+                $record['id'],
+                $record['course_type'],
+                $record['courseLevel'],
+                $record['course_list'],
+                $record['applicant_name'],
+                $record['employment_status'],
+                $record['photo_path'],
+                $record['registration_fee'],
+                $record['transaction_id']
+            );
             $stmtCopy->execute();
             
             // Delete original
             $deleteSql = "DELETE FROM estcregis WHERE id = ?";
+            $stmtDelete = $db->prepare($deleteSql);
+            $stmtDelete->bind_param("s", $id);
+            $stmtDelete->execute();
+            
         } else {
             throw new Exception("Invalid table for transfer");
         }
         
-        $stmtDelete = $conn->prepare($deleteSql);
-        $stmtDelete->bind_param("s", $id);
-        $stmtDelete->execute();
-        
-        $conn->commit();
+        $db->commit();
         $message = "Student transferred to backup successfully";
     } catch (Exception $e) {
-        $conn->rollback();
+        $db->rollback();
         $message = "Transfer failed: " . $e->getMessage();
     }
     
@@ -533,11 +590,11 @@ ob_end_flush();
                                                     </a>
 
                                                     <!-- For Polytechnic Students -->
-                                                    <a href="index.php?page=new_admission1.php&gid=<?= $row['RollNo'] ?>&table=polyregis" 
-                                                    class="btn btn-sm btn-secondary" 
-                                                    title="Transfer"
-                                                    onclick="return confirm('Transfer student to backup?')">
-                                                    <i class="fas fa-exchange-alt"></i> Transfer
+                                                    <a href="index.php?page=new_admission1.php?transfer=<?= $row['RollNo'] ?>&table=polyregis" 
+                                                        class="btn btn-sm btn-secondary" 
+                                                        title="Transfer"
+                                                        onclick="return confirm('Transfer student to backup?')">
+                                                        <i class="fas fa-exchange-alt"></i> Transfer
                                                     </a>
                                                 </td>
                                             <?php else: ?>
@@ -567,12 +624,11 @@ ob_end_flush();
                                                        onclick="return confirm('Are you sure you want to delete this record?')">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </a>
-                                                    <!-- For Non-Polytechnic Students -->
-                                                    <a href="index.php?page=promte_class1.php&gid=<?= $row['id'] ?>&table=estcregis" 
-                                                    class="btn btn-sm btn-secondary" 
-                                                    title="Transfer"
-                                                    onclick="return confirm('Transfer student to backup?')">
-                                                    <i class="fas fa-exchange-alt"></i> Transfer
+                                                    <a href="index.php?page=promote_class2.php&transfer_id=<?= $row['id'] ?>" 
+                                                        class="btn btn-sm btn-secondary" 
+                                                        title="Transfer"
+                                                        onclick="return confirm('Transfer student to non-polytechnic admission?')">
+                                                        <i class="fas fa-exchange-alt"></i> Transfer
                                                     </a>
                                                 </td>
                                             <?php endif; ?>

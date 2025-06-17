@@ -19,6 +19,56 @@ $edit_mode = false;
 $applicant_data = [];
 $educational_data = [];
 
+// Handle transfer from studentList.php
+if (isset($_GET['transfer_id'])) {
+    $transfer_id = $_GET['transfer_id'];
+    
+    try {
+        // Fetch student data from estcregis
+        $stmt = $conn->prepare("SELECT * FROM estcregis WHERE id = ?");
+        $stmt->bind_param("s", $transfer_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            throw new Exception("Student not found in estcregis table");
+        }
+        
+        $student_data = $result->fetch_assoc();
+        $stmt->close();
+        
+        // Set the data for the form
+        $edit_mode = true;
+        $applicant_data = [
+            'id' => $student_data['id'],
+            'applicant_name' => $student_data['applicant_name'],
+            'course_name' => $student_data['course_list'],
+            'admission_date' => date('Y-m-d'), // current date
+            'father_name' => '', // not available in estcregis
+            'dob' => '', // not available in estcregis
+            'aadhaar_no' => '', // not available in estcregis
+            'address' => '', // not available in estcregis
+            'mobile' => '', // not available in estcregis
+            'email' => '', // not available in estcregis
+            'category' => '' // not available in estcregis
+        ];
+        
+        // You might want to pre-fill some educational data based on course_list
+        $educational_data = [
+            [
+                'exam_name' => 'Previous Qualification',
+                'marks_obtained' => '',
+                'subjects' => $student_data['course_list'],
+                'school_college' => '',
+                'university_body' => ''
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        $error_message = "Transfer failed: " . $e->getMessage();
+    }
+}
+
 // Handle educational detail deletion
 if (isset($_GET['delete_edu_id'])) {
     $delete_id = $_GET['delete_edu_id'];
@@ -37,7 +87,7 @@ if (isset($_GET['delete_edu_id'])) {
         $stmt->close();
         
         // Redirect to edit mode
-        header("Location: promote_class1.php?edit_id=$id");
+        header("Location: promote_class2.php?edit_id=$id");
         exit();
     } catch (Exception $e) {
         $error_message = "Error deleting record: " . $e->getMessage();
@@ -205,7 +255,7 @@ if ($result->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admission Form</title>
+    <title>Non-Polytechnic Admission Form</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
@@ -251,6 +301,12 @@ if ($result->num_rows > 0) {
         .edu-row:hover .edu-actions {
             display: block;
         }
+        .transfer-banner {
+            background-color: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -258,13 +314,20 @@ if ($result->num_rows > 0) {
         <div class="row justify-content-center">
             <div class="col-lg-10">
                 <div class="card border-0 shadow">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h2 class="text-center mb-0"><?= $edit_mode ? 'Edit Admission' : 'Admission Form' ?></h2>
-                        <a href="index.php?page=promote_class1.php&view=records" class="btn btn-light">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h2 class="text-center mb-0"><?= $edit_mode ? 'Edit Non-Polytechnic Admission' : 'Non-Polytechnic Admission Form' ?></h2>
+                        <a href="index.php?page=promote_class2.php&view=records" class="btn btn-light">
                             <i class="bi bi-list-ul"></i> View Records
                         </a>
                     </div>
                     <div class="card-body p-4">
+                        <?php if (isset($_GET['transfer_id'])): ?>
+                            <div class="transfer-banner">
+                                <h4><i class="bi bi-info-circle"></i> Student Transferred from Registration</h4>
+                                <p>Please complete the admission process by filling in the missing details below.</p>
+                            </div>
+                        <?php endif; ?>
+                        
                         <?php if ($success_message): ?>
                             <div class="alert alert-success"><?= $success_message ?></div>
                         <?php endif; ?>
@@ -275,8 +338,8 @@ if ($result->num_rows > 0) {
                         <?php if (isset($_GET['view']) && $_GET['view'] == 'records'): ?>
                             <!-- Records View Section -->
                             <div class="mb-4">
-                                <h3 class="section-title">Admission Records</h3>
-                                <a href="index.php?page=promote_class1.php" class="btn btn-primary mb-3">
+                                <h3 class="section-title">Non-Polytechnic Admission Records</h3>
+                                <a href="index.php?page=promote_class2.php" class="btn btn-success mb-3">
                                     <i class="bi bi-arrow-left"></i> Back to Form
                                 </a>
                                 
@@ -287,7 +350,7 @@ if ($result->num_rows > 0) {
                                                 <div class="card record-card h-100">
                                                     <div class="card-header bg-light d-flex justify-content-between">
                                                         <h5 class="mb-0"><?= htmlspecialchars($record['applicant_name']) ?></h5>
-                                                        <span class="badge bg-info"><?= $record['course_name'] ?></span>
+                                                        <span class="badge bg-success"><?= $record['course_name'] ?></span>
                                                     </div>
                                                     <div class="card-body">
                                                         <p class="mb-1"><strong>Admission Date:</strong> <?= $record['admission_date'] ?></p>
@@ -296,7 +359,7 @@ if ($result->num_rows > 0) {
                                                         <p class="mb-1"><strong>Mobile:</strong> <?= htmlspecialchars($record['mobile']) ?></p>
                                                     </div>
                                                     <div class="card-footer bg-white action-buttons">
-                                                        <a href="index.php?page=promote_class1.php&edit_id=<?= $record['id'] ?>" class="btn btn-sm btn-warning">
+                                                        <a href="index.php?page=promote_class2.php&edit_id=<?= $record['id'] ?>" class="btn btn-sm btn-warning">
                                                             <i class="bi bi-pencil"></i> Edit
                                                         </a>
                                                         <a href="?delete_id=<?= $record['id'] ?>&view=records" 
@@ -305,7 +368,7 @@ if ($result->num_rows > 0) {
                                                             <i class="bi bi-trash"></i> Delete
                                                         </a>
                                                         <button type="button" class="btn btn-sm btn-info view-details" 
-                                                                data-id="page=promote_class1.php&<?= $record['id'] ?>">
+                                                                data-id="<?= $record['id'] ?>">
                                                             <i class="bi bi-eye"></i> View Details
                                                         </button>
                                                     </div>
@@ -343,7 +406,7 @@ if ($result->num_rows > 0) {
                                         <div class="col-md-6">
                                             <label class="form-label">Admission Date</label>
                                             <input type="date" class="form-control" name="admission_date" 
-                                                value="<?= $edit_mode ? $applicant_data['admission_date'] : '' ?>" required>
+                                                value="<?= $edit_mode ? $applicant_data['admission_date'] : date('Y-m-d') ?>" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Father's Name</label>
@@ -443,18 +506,18 @@ if ($result->num_rows > 0) {
                                                 <?php endif; ?>
                                             </tbody>
                                         </table>
-                                        <button type="button" class="btn btn-primary btn-add-row" id="add-row">
+                                        <button type="button" class="btn btn-success btn-add-row" id="add-row">
                                             + Add Row
                                         </button>
                                     </div>
                                 </div>
 
                                 <div class="d-grid mt-4">
-                                    <button type="submit" class="btn btn-primary btn-lg">
-                                        <?= $edit_mode ? 'Update Application' : 'Submit Application' ?>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <?= $edit_mode ? 'Update Admission' : 'Submit Admission' ?>
                                     </button>
                                     <?php if ($edit_mode): ?>
-                                        <a href="index.php?page=promote_class1.php" class="btn btn-secondary mt-2">Cancel Edit</a>
+                                        <a href="index.php?page=promote_class2.php" class="btn btn-secondary mt-2">Cancel Edit</a>
                                     <?php endif; ?>
                                 </div>
                             </form>
@@ -469,7 +532,7 @@ if ($result->num_rows > 0) {
     <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">Applicant Details</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
